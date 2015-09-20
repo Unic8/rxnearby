@@ -17,9 +17,6 @@ import rx.Subscriber;
 import rx.functions.Action0;
 import rx.subscriptions.Subscriptions;
 
-/**
- * Created by andre on 20.09.2015.
- */
 public class NearbyClient {
 
 	private static final String TAG = NearbyClient.class.getSimpleName();
@@ -100,6 +97,7 @@ public class NearbyClient {
 				final MessageListener messageListener = new MessageListener() {
 					@Override
 					public void onFound(Message message) {
+						Log.i(TAG, "message received");
 						subscriber.onNext(message);
 					}
 				};
@@ -108,6 +106,7 @@ public class NearbyClient {
 					public void call() {
 						Log.i(TAG, "stop listening for messages...");
 						Nearby.Messages.unsubscribe(messagesClient, messageListener);
+						subscriber.onCompleted();
 					}
 				}));
 				Log.i(TAG, "listening for messages...");
@@ -123,14 +122,22 @@ public class NearbyClient {
 				subscriber.add(Subscriptions.create(new Action0() {
 					@Override
 					public void call() {
-						Log.i(TAG, "unpublish");
-						Nearby.Messages.unpublish(messagesClient, message);
+						Log.i(TAG, "unpublishing...");
+						Nearby.Messages.unpublish(messagesClient, message)
+								.setResultCallback(new ResultCallback<Status>() {
+									@Override
+									public void onResult(Status status) {
+										Log.i(TAG, "unpublished: " + status.isSuccess());
+										subscriber.onCompleted();
+									}
+								});
 					}
 				}));
-				Log.i(TAG, "publish");
+				Log.i(TAG, "publishing...");
 				Nearby.Messages.publish(messagesClient, message).setResultCallback(new ResultCallback<Status>() {
 					@Override
 					public void onResult(Status status) {
+						Log.i(TAG, "published: " + status.isSuccess());
 						subscriber.onNext(status.isSuccess());
 					}
 				});
